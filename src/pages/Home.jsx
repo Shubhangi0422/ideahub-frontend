@@ -316,9 +316,10 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight, Zap, Code, BookOpen, Coffee,
-  TrendingUp, Moon, Sun,
+  TrendingUp, Moon, Sun, Bell,
 } from "lucide-react";
 import { getAllIdeas } from "../services/idea.service";
+import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "../services/notification.service";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 
@@ -544,9 +545,66 @@ const Home = () => {
   const navigate           = useNavigate();
   const [ideas,   setIdeas]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const { theme, toggleTheme } = useAuth();
-  const isDark     = theme === "dark";
+  const { theme, toggleTheme, notifications, unreadCount, markAllAsRead, markAsRead } = useAuth();
+  const isDark = theme === "dark";
   const isLoggedIn = !!localStorage.getItem("token");
+
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target)) {
+        setShowNotifications(false);
+      }
+    };
+    if (showNotifications) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showNotifications]);
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead();
+    } catch (error) {
+      console.error("Error marking all read:", error);
+    }
+  };
+
+  const handleNotificationClick = async (ideaId, notifIds) => {
+    if (notifIds.length > 0) {
+      try {
+        await Promise.all(notifIds.map(id => markAsRead(id)));
+      } catch (error) {
+        console.error("Error marking read:", error);
+      }
+    }
+    setShowNotifications(false);
+    navigate(`/idea/${ideaId}`);
+  };
+
+  const groupNotificationsByPost = (notifications) => {
+    const groups = {};
+    notifications.forEach(n => {
+      const ideaId = n.ideaId;
+      if (!groups[ideaId]) {
+        groups[ideaId] = {
+          ideaId,
+          title: n.idea?.title || "Unknown Idea",
+          items: [],
+          notifIds: [],
+          hasUnread: false,
+        };
+      }
+      groups[ideaId].items.push(n);
+      groups[ideaId].notifIds.push(n.id);
+      if (!n.isRead) {
+        groups[ideaId].hasUnread = true;
+      }
+    });
+    return Object.values(groups);
+  };
 
   const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
 
@@ -633,9 +691,167 @@ const Home = () => {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
           {isLoggedIn ? (
-            <Link to="/profile" style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg,#7c3aed,#2563eb)", color: "#fff", padding: "8px 20px", borderRadius: 40, textDecoration: "none", boxShadow: "0 4px 20px rgba(124,58,237,0.3)" }}>
-              Dashboard
-            </Link>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }} ref={notifDropdownRef}>
+              {/* Notification Bell */}
+              <div style={{ position: "relative" }}>
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 8,
+                    borderRadius: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: isDark ? "rgba(255,255,255,0.7)" : "rgba(15,23,42,0.6)",
+                    transition: "all .2s",
+                    position: "relative",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = isDark ? "#fff" : "#0f172a";
+                    e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = isDark ? "rgba(255,255,255,0.7)" : "rgba(15,23,42,0.6)";
+                    e.currentTarget.style.background = "none";
+                  }}
+                  title="Notifications"
+                >
+                  <Bell size={18} />
+                  {unreadCount > 0 && (
+                    <span style={{
+                      position: "absolute",
+                      top: 0,
+                      right: 0,
+                      background: "#ef4444",
+                      color: "#fff",
+                      fontSize: 9,
+                      fontWeight: 700,
+                      minWidth: 14,
+                      height: 14,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "0 2px",
+                    }}>
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div style={{
+                    position: "absolute",
+                    top: "100%",
+                    right: 0,
+                    marginTop: 10,
+                    width: 320,
+                    maxHeight: 400,
+                    overflowY: "auto",
+                    backgroundColor: isDark ? "rgba(3, 7, 18, 0.95)" : "rgba(255, 255, 255, 0.98)",
+                    border: `0.5px solid ${border}`,
+                    borderRadius: 16,
+                    boxShadow: isDark ? "0 10px 30px rgba(0,0,0,0.5)" : "0 10px 30px rgba(0,0,0,0.1)",
+                    backdropFilter: "blur(20px)",
+                    WebkitBackdropFilter: "blur(20px)",
+                    zIndex: 1000,
+                    display: "flex",
+                    flexDirection: "column",
+                  }}>
+                    {/* Header */}
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 16px",
+                      borderBottom: `0.5px solid ${border}`,
+                    }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: textPri }}>Notifications</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllAsRead}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: isDark ? "#a78bfa" : "#7c3aed",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            padding: 0,
+                          }}
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Notification list */}
+                    <div style={{ flex: 1, overflowY: "auto" }}>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: "32px 16px", textAlign: "center", color: textSec, fontSize: 13 }}>
+                          No notifications yet
+                        </div>
+                      ) : (
+                        groupNotificationsByPost(notifications).map((group) => (
+                          <div
+                            key={group.ideaId}
+                            onClick={() => handleNotificationClick(group.ideaId, group.notifIds)}
+                            style={{
+                              padding: 16,
+                              borderBottom: `0.5px solid ${border}`,
+                              cursor: "pointer",
+                              transition: "background .15s",
+                              textAlign: "left",
+                              background: group.hasUnread
+                                ? isDark ? "rgba(124,58,237,0.06)" : "rgba(124,58,237,0.03)"
+                                : "transparent",
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.backgroundColor = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)"}
+                            onMouseLeave={e => e.currentTarget.style.backgroundColor = group.hasUnread
+                              ? isDark ? "rgba(124,58,237,0.06)" : "rgba(124,58,237,0.03)"
+                              : "transparent"}
+                          >
+                            <div style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              color: isDark ? "#a78bfa" : "#7c3aed",
+                              marginBottom: 6,
+                              textTransform: "uppercase",
+                              letterSpacing: ".05em"
+                            }}>
+                              Post: {group.title}
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                              {group.items.map((item) => (
+                                <div key={item.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 12 }}>
+                                  <span style={{ fontSize: 13, flexShrink: 0 }}>
+                                    {item.type === "LIKE" ? "❤️" : "💬"}
+                                  </span>
+                                  <div style={{ lineHeight: 1.4 }}>
+                                    <span style={{ fontWeight: 650, color: textPri }}>{item.actor?.name}</span>{" "}
+                                    <span style={{ color: textSec }}>
+                                      {item.type === "LIKE" ? "liked your post" : `commented: "${item.comment?.content || ""}"`}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Link to="/profile" style={{ fontSize: 13, fontWeight: 600, background: "linear-gradient(135deg,#7c3aed,#2563eb)", color: "#fff", padding: "8px 20px", borderRadius: 40, textDecoration: "none", boxShadow: "0 4px 20px rgba(124,58,237,0.3)" }}>
+                Dashboard
+              </Link>
+            </div>
           ) : (
             <>
               <Link to="/login" style={{ fontSize: 13, color: textSec, textDecoration: "none", padding: "8px 12px" }}>Sign in</Link>

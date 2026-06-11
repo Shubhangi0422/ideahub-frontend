@@ -17,11 +17,15 @@ import IdeaDetails from "./pages/IdeaDetails";
 import NotFound from "./pages/NotFound";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
+import { useAuth } from "./context/AuthContext";
 
 function Layout() {
   const location = useLocation();
+  const { theme } = useAuth();
+  const isDark = theme === "dark";
 
   const hideLayout = [
+    "/",
     "/login",
     "/register",
     "/profile",
@@ -29,7 +33,7 @@ function Layout() {
   ].includes(location.pathname) || location.pathname.startsWith("/edit/");
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen transition-colors duration-300 ${isDark ? "bg-[#030712]" : "bg-gray-50"}`}>
 
       {/* Navbar */}
       {!hideLayout && <Navbar />}

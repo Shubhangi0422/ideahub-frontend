@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Lightbulb,
   Bookmark,
@@ -17,6 +17,7 @@ import {
   Edit,
   Heart,
   X,
+  Bell,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -232,7 +233,7 @@ const EmptyState = ({ icon: Icon, title, body, cta }) => {
 /* ─── Main component ─────────────────────────────────────────── */
 const Profile = () => {
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useAuth();
+  const { theme, toggleTheme, notifications, unreadCount, markAllAsRead, markAsRead } = useAuth();
   const isDark = theme === "dark";
 
   const handleLogout = () => {
@@ -496,6 +497,63 @@ const Profile = () => {
     }
   };
 
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target)) {
+        setShowNotifications(false);
+      }
+    };
+    if (showNotifications) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showNotifications]);
+
+  const handleNotificationClick = async (ideaId, notifIds) => {
+    if (notifIds.length > 0) {
+      try {
+        await Promise.all(notifIds.map(id => markAsRead(id)));
+      } catch (error) {
+        console.error("Error marking read:", error);
+      }
+    }
+    setShowNotifications(false);
+    navigate(`/idea/${ideaId}`);
+  };
+
+  const handleMarkAllAsReadForGroup = async (notifIds) => {
+    try {
+      await Promise.all(notifIds.map(id => markAsRead(id)));
+    } catch (error) {
+      console.error("Error marking group as read:", error);
+    }
+  };
+
+  const groupNotificationsByPost = (notifications) => {
+    const groups = {};
+    notifications.forEach(n => {
+      const ideaId = n.ideaId;
+      if (!groups[ideaId]) {
+        groups[ideaId] = {
+          ideaId,
+          title: n.idea?.title || "Unknown Idea",
+          items: [],
+          notifIds: [],
+          hasUnread: false,
+        };
+      }
+      groups[ideaId].items.push(n);
+      groups[ideaId].notifIds.push(n.id);
+      if (!n.isRead) {
+        groups[ideaId].hasUnread = true;
+      }
+    });
+    return Object.values(groups);
+  };
+
   const h = new Date().getHours();
   const greeting = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 
@@ -598,6 +656,91 @@ const Profile = () => {
       {/* ── MAIN CONTENT ───────────────────────────────────────── */}
       <main className="flex-1 ml-56 relative z-10 min-h-screen">
         <div className="w-full px-8 py-10">
+
+          {/* Top Header bar for notifications */}
+          <div className="flex justify-end items-center mb-6 relative z-[90]">
+            {/* Notification Bell */}
+            <div className="relative" ref={notifDropdownRef}>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`p-2.5 rounded-xl transition-all duration-300 relative border backdrop-blur-md hover:scale-105 ${
+                  isDark
+                    ? "bg-[#030712]/40 border-white/10 text-slate-300 hover:text-blue-400 hover:bg-white/5"
+                    : "bg-white/60 border-slate-200 text-slate-600 hover:bg-slate-100 shadow-sm"
+                }`}
+                title="Notifications"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notifications Dropdown */}
+              {showNotifications && (
+                <div className={`absolute right-0 mt-3 w-80 max-h-[400px] overflow-y-auto rounded-2xl border backdrop-blur-xl z-50 shadow-2xl flex flex-col transition-all duration-300 ${
+                  isDark ? "bg-[#030712]/95 border-white/10 text-white" : "bg-white/95 border-slate-200 text-slate-800"
+                }`}>
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-4 border-b border-inherit">
+                    <span className="text-sm font-bold">Notifications</span>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllAsRead}
+                        className={`text-xs font-semibold hover:underline ${isDark ? "text-violet-400" : "text-violet-600"}`}
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Notification list */}
+                  <div className="flex-1 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className={`p-8 text-center text-sm ${isDark ? "text-slate-500" : "text-gray-400"}`}>
+                        No notifications yet
+                      </div>
+                    ) : (
+                      groupNotificationsByPost(notifications).map((group) => (
+                        <div
+                          key={group.ideaId}
+                          onClick={() => handleNotificationClick(group.ideaId, group.notifIds)}
+                          className={`p-4 border-b border-inherit last:border-b-0 cursor-pointer transition-colors text-left hover:bg-slate-100/50 dark:hover:bg-white/5 ${
+                            group.hasUnread
+                              ? isDark ? "bg-violet-500/5" : "bg-violet-50/50"
+                              : ""
+                          }`}
+                        >
+                          <div className={`text-[10px] font-extrabold tracking-wider uppercase mb-1.5 ${
+                            isDark ? "text-violet-400" : "text-violet-600"
+                          }`}>
+                            Post: {group.title}
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {group.items.map((item) => (
+                              <div key={item.id} className="flex items-start gap-2.5 text-xs">
+                                <span className="mt-0.5 text-sm leading-none flex-shrink-0">
+                                  {item.type === "LIKE" ? "❤️" : "💬"}
+                                </span>
+                                <div>
+                                  <span className="font-semibold">{item.actor?.name}</span>{" "}
+                                  <span className={isDark ? "text-slate-400" : "text-slate-600"}>
+                                    {item.type === "LIKE" ? "liked your post" : `commented: "${item.comment?.content || ""}"`}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* ── DASHBOARD ──────────────────────────────────────── */}
           {activeSection === "dashboard" && (
@@ -1016,6 +1159,8 @@ const Profile = () => {
 
             </GlassCard>
           )}
+
+
         </div>
       </main>
 

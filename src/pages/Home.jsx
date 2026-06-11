@@ -548,6 +548,17 @@ const Home = () => {
   const isDark     = theme === "dark";
   const isLoggedIn = !!localStorage.getItem("token");
 
+  const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isTablet = windowWidth < 1024;
+  const isMobile = windowWidth < 768;
+
   useEffect(() => { fetchIdeas(); }, []);
 
   const fetchIdeas = async () => {
@@ -595,7 +606,7 @@ const Home = () => {
           display:     "flex",
           alignItems:  "center",
           justifyContent: "space-between",
-          padding:     "14px 48px",
+          padding:     isTablet ? "14px 20px" : "14px 48px",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
           background:  isDark ? "rgba(3,7,18,0.75)" : "rgba(248,250,252,0.85)",
@@ -609,7 +620,7 @@ const Home = () => {
         </div>
 
         {/* Nav links */}
-        <div style={{ display: "flex", gap: 32 }}>
+        <div style={{ display: isMobile ? "none" : "flex", gap: 32 }}>
           {["Explore","Categories","Trending"].map(l => (
             <span key={l} style={{ fontSize: 13, color: textSec, cursor: "pointer", transition: "color .15s" }}
               onMouseEnter={e => e.target.style.color = textPri}
@@ -663,7 +674,7 @@ const Home = () => {
         {/* Two Columns Grid Container */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "1.05fr 0.95fr",
+          gridTemplateColumns: isTablet ? "1fr" : "1.05fr 0.95fr",
           width: "100%",
           maxWidth: 1400,
           margin: "0 auto",
@@ -676,9 +687,10 @@ const Home = () => {
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "flex-start",
-            padding: "80px 64px 80px 80px",
+            padding: isMobile ? "60px 20px" : isTablet ? "80px 40px" : "100px 64px 100px 80px",
             textAlign: "left",
-            borderRight: `0.5px solid ${border}`,
+            borderRight: isTablet ? "none" : `0.5px solid ${border}`,
+            borderBottom: isTablet ? `0.5px solid ${border}` : "none",
           }}>
             {/* Eyebrow */}
             <div style={{
@@ -812,16 +824,16 @@ const Home = () => {
             </div>
 
             {/* Stats row */}
-            <div style={{ display: "flex", gap: 32, flexWrap: "wrap", animation: "fadeUp .6s .7s ease both" }}>
+            <div style={{ display: "flex", gap: isMobile ? 24 : 32, flexWrap: "wrap", animation: "fadeUp .6s .7s ease both" }}>
               {[
                 ["12K+", "IDEAS"],
                 ["4.8K", "CREATORS"],
                 ["38K", "TALKS"],
                 ["120+", "TOPICS"]
               ].map(([val, label]) => (
-                <div key={label} style={{ minWidth: 80 }}>
-                  <p style={{ fontSize: 26, fontWeight: 900, color: textPri, margin: 0, letterSpacing: "-.02em" }}>{val}</p>
-                  <p style={{ fontSize: 10, color: textSec, fontWeight: 700, margin: "2px 0 0", letterSpacing: ".1em" }}>{label}</p>
+                <div key={label} style={{ minWidth: isMobile ? 65 : 80 }}>
+                  <p style={{ fontSize: isMobile ? 22 : 26, fontWeight: 900, color: textPri, margin: 0, letterSpacing: "-.02em" }}>{val}</p>
+                  <p style={{ fontSize: 9, color: textSec, fontWeight: 700, margin: "2px 0 0", letterSpacing: ".1em" }}>{label}</p>
                 </div>
               ))}
             </div>
@@ -832,13 +844,13 @@ const Home = () => {
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
-            padding: "80px 48px",
+            padding: isMobile ? "40px 20px" : isTablet ? "60px 40px" : "80px 48px",
             position: "relative",
           }}>
             {/* Visual cards grid */}
             <div style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr",
+              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
               gap: 16,
               width: "100%",
               maxWidth: 580,
@@ -993,7 +1005,7 @@ const Home = () => {
 
               {/* Card 5: Life Hacks */}
               <Glass style={{
-                gridColumn: "span 2",
+                gridColumn: isMobile ? "span 1" : "span 2",
                 padding: 20,
                 background: "rgba(255,255,255,0.015)",
                 border: `0.5px solid ${border}`,
@@ -1035,13 +1047,13 @@ const Home = () => {
       <Ticker isDark={isDark} />
 
       {/* ── CATEGORIES ──────────────────────────────────────── */}
-      <section style={{ padding: "100px 0", position: "relative" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 48px" }}>
+      <section style={{ padding: isMobile ? "60px 0" : "100px 0", position: "relative" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "0 20px" : "0 48px" }}>
 
-          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 52 }}>
+          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "flex-end", justifyContent: "space-between", gap: isMobile ? 16 : 0, marginBottom: 52 }}>
             <div>
               <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".16em", textTransform: "uppercase", color: "#a78bfa", marginBottom: 10 }}>Topics</p>
-              <h2 style={{ fontSize: "clamp(28px,4vw,44px)", fontWeight: 800, letterSpacing: "-.03em", color: textPri, margin: 0 }}>
+              <h2 style={{ fontSize: "clamp(24px,4vw,44px)", fontWeight: 800, letterSpacing: "-.03em", color: textPri, margin: 0 }}>
                 Browse categories
               </h2>
             </div>
@@ -1050,12 +1062,12 @@ const Home = () => {
             </span>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 16 }}>
             {CATS.map(({ num, label, count, accent }) => (
               <Glass
                 key={label}
                 style={{
-                  padding:    32,
+                  padding:    24,
                   background: surface,
                   border:     `0.5px solid ${border}`,
                   cursor:     "pointer",
@@ -1080,7 +1092,7 @@ const Home = () => {
                 {/* Large number count and diagonal arrow row */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
                   <span style={{
-                    fontSize: 48,
+                    fontSize: 40,
                     fontWeight: 900,
                     color: accent,
                     opacity: 0.8,
@@ -1104,13 +1116,13 @@ const Home = () => {
       </section>
 
       {/* ── IDEAS ───────────────────────────────────────────── */}
-      <section style={{ padding: "0 0 100px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 48px" }}>
+      <section style={{ padding: isMobile ? "0 0 60px" : "0 0 100px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "0 20px" : "0 48px" }}>
 
-          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 52 }}>
+          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "flex-end", justifyContent: "space-between", gap: isMobile ? 16 : 0, marginBottom: 52 }}>
             <div>
               <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".16em", textTransform: "uppercase", color: "#38bdf8", marginBottom: 10 }}>Community</p>
-              <h2 style={{ fontSize: "clamp(28px,4vw,44px)", fontWeight: 800, letterSpacing: "-.03em", color: textPri, margin: 0 }}>
+              <h2 style={{ fontSize: "clamp(24px,4vw,44px)", fontWeight: 800, letterSpacing: "-.03em", color: textPri, margin: 0 }}>
                 Latest ideas
               </h2>
             </div>
@@ -1128,7 +1140,7 @@ const Home = () => {
             <p style={{ color: textSec }}>No ideas yet — be the first to share!</p>
           ) : (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: 16 }}>
                 {ideas.slice(0, 3).map((idea, i) => {
                   const ac = IDEA_COLORS[i % 3];
                   return (
@@ -1136,7 +1148,7 @@ const Home = () => {
                       key={idea.id}
                       onClick={() => goIdea(idea.id)}
                       style={{
-                        padding:    28,
+                        padding:    24,
                         background: surface,
                         border:     `0.5px solid ${border}`,
                         display:    "flex",
@@ -1186,7 +1198,7 @@ const Home = () => {
                       </div>
 
                       {/* Title */}
-                      <h3 style={{ fontSize: 18, fontWeight: 800, color: textPri, lineHeight: 1.4, margin: 0, letterSpacing: "-.01em", position: "relative", zIndex: 1 }}>
+                      <h3 style={{ fontSize: 18, fontWeight: 800, color: textPri, margin: 0, letterSpacing: "-.01em", position: "relative", zIndex: 1 }}>
                         {idea.title}
                       </h3>
 
@@ -1239,15 +1251,16 @@ const Home = () => {
       </section>
 
       {/* ── TRENDING BANNER ─────────────────────────────────── */}
-      <section style={{ padding: "0 0 100px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 48px" }}>
+      <section style={{ padding: isMobile ? "0 0 60px" : "0 0 100px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "0 20px" : "0 48px" }}>
           <Glass style={{
             background: surface,
             border:     `0.5px solid ${border}`,
-            padding:    "48px 52px",
+            padding:    isMobile ? "32px 24px" : "48px 52px",
             display:    "flex",
-            alignItems: "center",
-            gap:        32,
+            flexDirection: isMobile ? "column" : "row",
+            alignItems: isMobile ? "flex-start" : "center",
+            gap:        isMobile ? 24 : 32,
             position:   "relative",
             overflow:   "hidden",
             borderRadius: 24,
@@ -1289,6 +1302,8 @@ const Home = () => {
                 transition: "all 0.2s ease",
                 boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.2)" : "0 4px 15px rgba(0,0,0,0.05)",
                 position: "relative",
+                width: isMobile ? "100%" : "auto",
+                justifyContent: "center",
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)";
@@ -1308,11 +1323,12 @@ const Home = () => {
       {/* ── FOOTER ──────────────────────────────────────────── */}
       <footer style={{
         borderTop:  `0.5px solid ${border}`,
-        padding:    "32px 48px",
+        padding:    isMobile ? "24px 20px" : "32px 48px",
         display:    "flex",
+        flexDirection: isMobile ? "column" : "row",
         alignItems: "center",
         justifyContent: "space-between",
-        flexWrap:   "wrap",
+        textAlign:  isMobile ? "center" : "left",
         gap:        16,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1320,7 +1336,7 @@ const Home = () => {
           <span style={{ fontSize: 13, fontWeight: 700, color: textPri }}>IdeaHub</span>
         </div>
         <p style={{ fontSize: 12, color: textSec, margin: 0 }}>© 2025 IdeaHub — Share · Learn · Build · Innovate</p>
-        <div style={{ display: "flex", gap: 24 }}>
+        <div style={{ display: "flex", gap: isMobile ? 16 : 24 }}>
           {["Privacy","Terms","Contact"].map(l => (
             <span key={l} style={{ fontSize: 12, color: textSec, cursor: "pointer" }}>{l}</span>
           ))}
